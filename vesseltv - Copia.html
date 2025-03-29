@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vessel tv🧸📺✨</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #5b5b58; 
+        }
+        #playerContainer {
+            display: flex;
+            flex-direction: column; /* Coloca os botões abaixo do player */
+            align-items: center;
+            justify-content: center; /* Centraliza verticalmente o player */
+            width: 100%; /* Aumenta a largura do contêiner */
+            max-width: 1060px; /* Aumenta a largura máxima do contêiner */
+            margin-right: 11%; /* Move o contêiner para a esquerda */
+        }
+        #player {
+            width: 100%;
+            height: auto; /* Mantém a proporção do vídeo */
+        }
+        .control-buttons {
+            display: flex;
+            justify-content: center; /* Centraliza os botões horizontalmente */
+            flex-wrap: wrap; /* Permite que os botões se ajustem */
+            margin-top: 10px; /* Margem superior para separação */
+        }
+        .control-buttons button,
+        .control-buttons label {
+            background-color: #444;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        .control-buttons button:hover,
+        .control-buttons label:hover {
+            background-color: #666; /* Cor de fundo ao passar o mouse */
+        }
+        #playlist {
+            width: 10%;
+            max-width: 300px;
+            padding: 10px;
+            background-color: #5b5b58;
+            border-left: 1px solid #bbb; /* Linha separadora à esquerda */
+            position: absolute;
+            top: 0;
+            right: 0; /* Lista no canto direito */
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        #playlist ul {
+            list-style: none;
+            padding: 0;
+            margin: 0; /* Remove o espaço padrão da lista */
+            flex-grow: 1;
+            overflow-y: auto; /* Adiciona rolagem quando a lista for maior que a área disponível */
+        }
+        #playlist li {
+            cursor: pointer;
+            margin-bottom: 10px; /* Espaçamento entre os itens */
+            font-family: Arial, sans-serif; /* Fonte Arial */
+            color: white; /* Cor branca */
+            padding: 5px; /* Adiciona um pequeno padding para melhorar a aparência */
+            background-color: #444; /* Cor de fundo para destacar os itens */
+            border-radius: 3px; /* Borda arredondada para os itens */
+            white-space: nowrap; /* Evita quebras de linha */
+            overflow: hidden; /* Oculta o texto que ultrapassa a largura */
+            text-overflow: ellipsis; /* Adiciona "..." no final do texto muito longo */
+        }
+        #playlist li:hover {
+            background-color: #666; /* Cor de fundo ao passar o mouse */
+        }
+        #fileInput {
+            display: none; /* Esconde o input real */
+        }
+        .highlight {
+            background-color: white !important;
+            color: black !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="playerContainer">
+        <video id="player" controls>
+            <!-- O vídeo será carregado aqui -->
+        </video>
+        <div class="control-buttons">
+            <button id="autoplayButton">Desligar Autoplay</button>
+            <button id="shuffleButton">Ativar Shuffle</button>
+            <button id="previousButton">Episódio Anterior</button>
+            <button id="nextButton">Próximo Episódio</button>
+            <label for="fileInput" id="fileInputLabel">Escolher Arquivos</label>
+            <input id="fileInput" type="file" accept="video/*" multiple>
+        </div>
+    </div>
+    <div id="playlist">
+        <ul id="videoList">
+            <!-- A lista de vídeos será preenchida dinamicamente -->
+        </ul>
+    </div>
+
+    <script>
+        const player = document.getElementById('player');
+        const videoList = document.getElementById('videoList');
+        const fileInput = document.getElementById('fileInput');
+        const autoplayButton = document.getElementById('autoplayButton');
+        const shuffleButton = document.getElementById('shuffleButton');
+        const previousButton = document.getElementById('previousButton');
+        const nextButton = document.getElementById('nextButton');
+        let episodes = []; // Array para armazenar os episódios carregados
+        let currentEpisodeIndex = 0; // Índice do episódio atual
+        let isAutoplayEnabled = true; // Estado do autoplay
+        let isShuffleEnabled = false; // Estado do shuffle
+
+        function truncateText(text, maxLength) {
+            if (text.length > maxLength) {
+                return text.substring(0, maxLength) + '...';
+            }
+            return text;
+        }
+
+        function loadEpisode(file) {
+            const url = URL.createObjectURL(file);
+            episodes.push(url);
+            const index = episodes.length - 1;
+            const listItem = document.createElement('li');
+            listItem.textContent = truncateText(file.name, 20); // Trunca o nome do episódio
+            listItem.addEventListener('click', () => playEpisode(index));
+            videoList.appendChild(listItem);
+            if (episodes.length === 1) {
+                player.src = url;
+                player.play();
+                highlightCurrentEpisode(); // Destaca o episódio inicial
+            }
+        }
+
+        function playEpisode(index) {
+            currentEpisodeIndex = index;
+            player.src = episodes[index];
+            player.play();
+            highlightCurrentEpisode(); // Destaca o episódio atual
+        }
+
+        function playPreviousEpisode() {
+            currentEpisodeIndex = (currentEpisodeIndex - 1 + episodes.length) % episodes.length;
+            player.src = episodes[currentEpisodeIndex];
+            player.play();
+            highlightCurrentEpisode(); // Destaca o episódio anterior
+        }
+
+        function playNextEpisode() {
+            if (isShuffleEnabled) {
+                playRandomEpisode();
+            } else {
+                currentEpisodeIndex = (currentEpisodeIndex + 1) % episodes.length;
+                player.src = episodes[currentEpisodeIndex];
+                player.play();
+                highlightCurrentEpisode(); // Destaca o próximo episódio
+            }
+        }
+
+        function playRandomEpisode() {
+            let randomIndex;
+            do {
+                randomIndex = Math.floor(Math.random() * episodes.length);
+            } while (randomIndex === currentEpisodeIndex);
+            playEpisode(randomIndex);
+        }
+
+        function highlightCurrentEpisode() {
+            const items = videoList.getElementsByTagName('li');
+            for (let i = 0; i < items.length; i++) {
+                items[i].classList.remove('highlight');
+            }
+            items[currentEpisodeIndex].classList.add('highlight');
+        }
+
+        fileInput.addEventListener('change', (event) => {
+            const files = event.target.files;
+            if (files && files.length > 0) {
+                for (const file of files) {
+                    loadEpisode(file);
+                }
+            }
+        });
+
+        previousButton.addEventListener('click', playPreviousEpisode);
+        nextButton.addEventListener('click', playNextEpisode);
+
+        autoplayButton.addEventListener('click', () => {
+            isAutoplayEnabled = !isAutoplayEnabled;
+            autoplayButton.textContent = isAutoplayEnabled ? 'Desligar Autoplay' : 'Ligar Autoplay';
+        });
+
+        shuffleButton.addEventListener('click', () => {
+            isShuffleEnabled = !isShuffleEnabled;
+            shuffleButton.textContent = isShuffleEnabled ? 'Desligar Shuffle' : 'Ativar Shuffle';
+        });
+
+        // Adiciona o evento 'ended' para o vídeo
+        player.addEventListener('ended', () => {
+            if (isAutoplayEnabled) {
+                playNextEpisode();
+            }
+        });
+    </script>
+</body>
+</html>

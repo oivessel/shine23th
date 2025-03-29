@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="C:\Users\Juan\Desktop\vssltv\happy_teddy_bear.ico">
+    <title>vessel tv🧸📺✨</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #121212;
+            font-family: 'Arial', sans-serif;
+            color: #fff;
+        }
+
+        #playerContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            background-color: #1e1e1e;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        #player {
+            width: 100%;
+            height: calc(100% - 100px); /* Subtrai o espaço para os botões */
+        }
+
+        .control-buttons {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            width: 100%;
+            gap: 10px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .control-buttons button,
+        .control-buttons label {
+            background-color: #333;
+            border: 1px solid #555;
+            color: white;
+            padding: 10px 20px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease, transform 0.2s;
+        }
+
+        .control-buttons button:hover,
+        .control-buttons label:hover {
+            background-color: #555;
+            transform: translateY(-2px);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .highlight {
+            background-color: #4caf50 !important;
+            color: white !important;
+        }
+
+        /* Botão "Escolher Arquivos" estilizado */
+        #fileInputLabel {
+            background-color: #4caf50;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #fileInputLabel:hover {
+            background-color: #66bb6a;
+        }
+
+        /* Estilizando a playlist como janela flutuante */
+        #playlist {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+            background-color: #2a2a2a;
+            border: 1px solid #555;
+            border-radius: 10px;
+            display: none;
+            padding: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        #playlist ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        #playlist li {
+            padding: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #playlist li:hover {
+            background-color: #444;
+        }
+
+        /* Destaque para o episódio atual */
+        .current-episode {
+            background-color: #4caf50 !important;
+            color: white !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="playerContainer">
+        <video id="player" controls>
+            <!-- O vídeo será carregado aqui -->
+        </video>
+        <div class="control-buttons">
+            <button id="autoplayButton">Desligar Autoplay</button>
+            <button id="shuffleButton">Ativar Shuffle</button>
+            <button id="previousButton">Episódio Anterior</button>
+            <button id="nextButton">Próximo Episódio</button>
+            <label for="fileInput" id="fileInputLabel">Escolher Arquivos</label>
+            <input id="fileInput" type="file" accept="video/*" multiple>
+            <button id="togglePlaylistButton">Mostrar Playlist</button>
+        </div>
+        <div id="playlist">
+            <!-- A lista de vídeos será exibida aqui -->
+        </div>
+    </div>
+
+    <script>
+        const player = document.getElementById('player');
+        const fileInput = document.getElementById('fileInput');
+        const autoplayButton = document.getElementById('autoplayButton');
+        const shuffleButton = document.getElementById('shuffleButton');
+        const previousButton = document.getElementById('previousButton');
+        const nextButton = document.getElementById('nextButton');
+        const playlist = document.getElementById('playlist');
+        const togglePlaylistButton = document.getElementById('togglePlaylistButton');
+        
+        let episodes = [];
+        let currentEpisodeIndex = 0;
+        let isAutoplayEnabled = true;
+        let isShuffleEnabled = false;
+
+        function truncateText(text, maxLength) {
+            if (text.length > maxLength) {
+                return text.substring(0, maxLength) + '...';
+            }
+            return text;
+        }
+
+        function loadEpisode(file) {
+            const url = URL.createObjectURL(file);
+            episodes.push(url);
+            if (episodes.length === 1) {
+                player.src = url;
+                player.play();
+            }
+        }
+
+        function playEpisode(index) {
+            currentEpisodeIndex = index;
+            player.src = episodes[index];
+            player.play();
+            updatePlaylistHighlight(); // Atualiza o destaque na playlist
+        }
+
+        function playPreviousEpisode() {
+            currentEpisodeIndex = (currentEpisodeIndex - 1 + episodes.length) % episodes.length;
+            playEpisode(currentEpisodeIndex);
+        }
+
+        function playNextEpisode() {
+            if (isShuffleEnabled) {
+                playRandomEpisode();
+            } else {
+                currentEpisodeIndex = (currentEpisodeIndex + 1) % episodes.length;
+                playEpisode(currentEpisodeIndex);
+            }
+        }
+
+        function playRandomEpisode() {
+            let randomIndex;
+            do {
+                randomIndex = Math.floor(Math.random() * episodes.length);
+            } while (randomIndex === currentEpisodeIndex);
+            playEpisode(randomIndex);
+        }
+
+        // Função para atualizar a playlist
+        function updatePlaylist() {
+            const ul = document.createElement('ul');
+            ul.innerHTML = ''; // Limpa a lista antes de adicionar novos itens
+
+            episodes.forEach((episode, index) => {
+                const li = document.createElement('li');
+                const fileName = truncateText(fileInput.files[index].name, 30);
+                li.textContent = fileName;
+
+                // Adiciona o evento de clicar no item da lista para tocar o episódio
+                li.addEventListener('click', () => {
+                    playEpisode(index);
+                });
+
+                ul.appendChild(li);
+            });
+
+            playlist.innerHTML = ''; // Limpa a playlist antes de adicionar novos itens
+            playlist.appendChild(ul);
+            updatePlaylistHighlight(); // Atualiza o destaque na playlist
+        }
+
+        // Função para destacar o episódio atual
+        function updatePlaylistHighlight() {
+            const playlistItems = playlist.querySelectorAll('li');
+            playlistItems.forEach((item, index) => {
+                item.classList.toggle('current-episode', index === currentEpisodeIndex);
+            });
+        }
+
+        // Evento para alternar a exibição da playlist
+        togglePlaylistButton.addEventListener('click', () => {
+            if (episodes.length > 0) { // Certifica-se de que há vídeos na playlist
+                if (playlist.style.display === 'none') {
+                    playlist.style.display = 'block';
+                    togglePlaylistButton.textContent = 'Ocultar Playlist';
+                } else {
+                    playlist.style.display = 'none';
+                    togglePlaylistButton.textContent = 'Mostrar Playlist';
+                }
+            } else {
+                alert('Nenhum arquivo foi carregado ainda.');
+            }
+        });
+
+        fileInput.addEventListener('change', (event) => {
+            const files = event.target.files;
+            if (files && files.length > 0) {
+                for (const file of files) {
+                    loadEpisode(file);
+                }
+                updatePlaylist(); // Atualiza a playlist após carregar novos episódios
+            }
+        });
+
+        previousButton.addEventListener('click', playPreviousEpisode);
+        nextButton.addEventListener('click', playNextEpisode);
+
+        autoplayButton.addEventListener('click', () => {
+            isAutoplayEnabled = !isAutoplayEnabled;
+            autoplayButton.textContent = isAutoplayEnabled ? 'Desligar Autoplay' : 'Ligar Autoplay';
+        });
+
+        shuffleButton.addEventListener('click', () => {
+            isShuffleEnabled = !isShuffleEnabled;
+            shuffleButton.textContent = isShuffleEnabled ? 'Desligar Shuffle' : 'Ativar Shuffle';
+        });
+
+        player.addEventListener('ended', () => {
+            if (isAutoplayEnabled) {
+                playNextEpisode();
+            }
+        });
+    </script>
+</body>
+</html>
